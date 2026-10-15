@@ -1,0 +1,5 @@
+{
+  "tool": null,
+  "gate": "build+verify",
+  "packageManager": "npm"
+}

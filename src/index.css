@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #70263D;
+  --color-background: #FFF9F2;
+  --color-accent: #C5A46D;
+  --color-text: #302522;
+  --color-secondary: #D9A6A6;
+  --color-surface: #FFFFFF;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-error: #b91c1c;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    @apply antialiased font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+/* Custom luxury beauty salon styling */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(197, 164, 109, 0.25);
+}
+
+.glass-dark {
+  background: rgba(48, 37, 34, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FFF9F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D9A6A6;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #70263D;
+}
+
+/* Subtle luxury dot mesh pattern */
+.bg-mesh-pattern {
+  background-color: #FFF9F2;
+  background-image: radial-gradient(#C5A46D 0.85px, transparent 0.85px), radial-gradient(#D9A6A6 0.85px, #FFF9F2 0.85px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
