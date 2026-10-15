@@ -1,4 +1,4 @@
-# Lyna Hair Touch — Interactive Sales Demo & Scheduling Prototype
+# Braids By Helen
 
 A mobile-first, high-polish salon booking prototype designed for **Lyna Hair Touch**. Demonstrating how direct online appointment self-scheduling eliminates WhatsApp back-and-forth messaging.
 
