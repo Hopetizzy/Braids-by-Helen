@@ -17,9 +17,17 @@ export const DeclineModal = ({
   onClose,
   onSubmit,
 }) => {
+  const [selectedReason, setSelectedReason] = useState(REASON_PRESETS[0]);
+  const [customNote, setCustomNote] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      setSelectedReason(REASON_PRESETS[0]);
+      setCustomNote('');
+      setError('');
       return () => {
         document.body.style.overflow = '';
       };
@@ -27,11 +35,6 @@ export const DeclineModal = ({
   }, [isOpen]);
 
   if (!isOpen || !appointment) return null;
-
-  const [selectedReason, setSelectedReason] = useState(REASON_PRESETS[0]);
-  const [customNote, setCustomNote] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();

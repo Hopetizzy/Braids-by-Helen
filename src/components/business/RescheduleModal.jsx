@@ -18,9 +18,25 @@ export const RescheduleModal = ({
   onClose,
   onSubmit,
 }) => {
+  // Always declare all hooks at the top level
+  const [proposedDate, setProposedDate] = useState(() =>
+    new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  );
+  const [proposedTimeSlot, setProposedTimeSlot] = useState(COMMON_SLOTS[0]);
+  const [customSlot, setCustomSlot] = useState('');
+  const [note, setNote] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      const defaultDate = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      setProposedDate(defaultDate);
+      setProposedTimeSlot(COMMON_SLOTS[0]);
+      setCustomSlot('');
+      setNote('');
+      setError('');
       return () => {
         document.body.style.overflow = '';
       };
@@ -28,15 +44,6 @@ export const RescheduleModal = ({
   }, [isOpen]);
 
   if (!isOpen || !appointment) return null;
-
-  // Default proposed date to tomorrow
-  const defaultDate = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const [proposedDate, setProposedDate] = useState(defaultDate);
-  const [proposedTimeSlot, setProposedTimeSlot] = useState(COMMON_SLOTS[0]);
-  const [customSlot, setCustomSlot] = useState('');
-  const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const selectedSlot = customSlot.trim() || proposedTimeSlot;
 

@@ -75,10 +75,10 @@ export default function InstallPromptModal({ forceOpen = false, onClose }) {
   if (!isOpen || isInstalled) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-espresso/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/75 backdrop-blur-sm animate-fade-in">
       <div className="flex min-h-full items-end sm:items-center justify-center p-4 text-center">
         <div 
-          className="w-full max-w-md bg-cream rounded-3xl border border-blush/30 shadow-2xl p-6 sm:p-7 relative overflow-hidden animate-slide-up text-left my-6"
+          className="w-full max-w-md bg-[#FFF9F2] rounded-3xl border border-stone-300/80 shadow-2xl p-6 sm:p-7 relative overflow-hidden animate-slide-up text-left my-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="install-modal-title"
@@ -89,7 +89,7 @@ export default function InstallPromptModal({ forceOpen = false, onClose }) {
         {/* Close Button */}
         <button
           onClick={handleDismiss}
-          className="absolute top-4 right-4 p-2 text-espresso/40 hover:text-espresso rounded-full hover:bg-espresso/5 transition-colors"
+          className="absolute top-4 right-4 p-2 text-stone-500 hover:text-stone-900 rounded-full hover:bg-stone-200/60 transition-colors"
           aria-label="Close install prompt"
         >
           <X className="w-5 h-5" />
@@ -105,68 +105,68 @@ export default function InstallPromptModal({ forceOpen = false, onClose }) {
             />
           </div>
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-rosewood uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-rosewood-700 uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Mobile Experience</span>
             </div>
-            <h3 id="install-modal-title" className="text-xl font-serif font-bold text-espresso">
+            <h3 id="install-modal-title" className="text-xl font-serif font-bold text-stone-900">
               Install Braids by Helen
             </h3>
           </div>
         </div>
 
-        <p className="text-sm text-espresso/80 leading-relaxed mb-6">
+        <p className="text-sm font-medium text-stone-700 leading-relaxed mb-6">
           Add the salon to your phone home screen for instant booking access, offline gallery previews, and direct appointment notifications.
         </p>
 
         {/* Device Specific Content */}
         {deviceIsIOS ? (
-          <div className="bg-white/80 rounded-2xl p-4 border border-blush/20 mb-6 space-y-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-espresso/60 flex items-center gap-1.5">
-              <Smartphone className="w-4 h-4 text-rosewood" />
+          <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-sm mb-6 space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+              <Smartphone className="w-4 h-4 text-rosewood-700" />
               <span>How to install on iPhone & iPad</span>
             </div>
             
-            <ol className="text-xs text-espresso/80 space-y-2.5">
+            <ol className="text-xs text-stone-700 space-y-2.5 font-medium">
               <li className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-rosewood/10 text-rosewood flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-rosewood/10 text-rosewood-700 flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
                   1
                 </span>
                 <span>
-                  Tap the <strong className="text-espresso font-semibold">Share</strong> button at the bottom of Safari (<Share className="w-3.5 h-3.5 inline text-rosewood mx-0.5 -mt-0.5" /> icon).
+                  Tap the <strong className="text-stone-900 font-bold">Share</strong> button at the bottom of Safari (<Share className="w-3.5 h-3.5 inline text-rosewood-700 mx-0.5 -mt-0.5" /> icon).
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-rosewood/10 text-rosewood flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-rosewood/10 text-rosewood-700 flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
                   2
                 </span>
                 <span>
-                  Scroll down the options and select <strong className="text-espresso font-semibold">Add to Home Screen</strong> (<PlusSquare className="w-3.5 h-3.5 inline text-rosewood mx-0.5 -mt-0.5" />).
+                  Scroll down the options and select <strong className="text-stone-900 font-bold">Add to Home Screen</strong> (<PlusSquare className="w-3.5 h-3.5 inline text-rosewood-700 mx-0.5 -mt-0.5" />).
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-rosewood/10 text-rosewood flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-rosewood/10 text-rosewood-700 flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
                   3
                 </span>
                 <span>
-                  Tap <strong className="text-espresso font-semibold">Add</strong> in the top right corner to finish.
+                  Tap <strong className="text-stone-900 font-bold">Add</strong> in the top right corner to finish.
                 </span>
               </li>
             </ol>
           </div>
         ) : (
           <div className="mb-6">
-            <ul className="text-xs text-espresso/80 space-y-2 mb-4">
+            <ul className="text-xs text-stone-800 space-y-2.5 mb-4 font-medium">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-rosewood flex-shrink-0" />
-                <span>One tap access directly from your app drawer</span>
+                <CheckCircle2 className="w-4 h-4 text-rosewood-700 flex-shrink-0" />
+                <span>One-tap access directly from your app drawer</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-rosewood flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-rosewood-700 flex-shrink-0" />
                 <span>Instant appointment alerts and status updates</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-rosewood flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-rosewood-700 flex-shrink-0" />
                 <span>Works smoothly even on slow mobile networks</span>
               </li>
             </ul>
@@ -174,7 +174,7 @@ export default function InstallPromptModal({ forceOpen = false, onClose }) {
             {deferredPrompt && (
               <button
                 onClick={handleInstallClick}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-rosewood text-cream rounded-2xl font-medium text-sm hover:bg-rosewood/90 shadow-md transition-all active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-rosewood-700 text-white rounded-2xl font-bold text-sm hover:bg-rosewood-800 shadow-md transition-all active:scale-[0.98]"
               >
                 <Download className="w-4 h-4" />
                 <span>Install Application</span>
@@ -184,15 +184,15 @@ export default function InstallPromptModal({ forceOpen = false, onClose }) {
         )}
 
         {/* Secondary Action */}
-        <div className="flex justify-between items-center pt-2 border-t border-blush/20">
+        <div className="flex justify-between items-center pt-3 border-t border-stone-200">
           <button
             onClick={handleDismiss}
-            className="text-xs text-espresso/60 hover:text-espresso font-medium py-1.5 transition-colors"
+            className="text-xs text-stone-600 hover:text-stone-900 font-semibold py-1.5 transition-colors"
           >
             Maybe later
           </button>
           
-          <span className="text-[11px] text-espresso/40">
+          <span className="text-[11px] text-stone-500 font-medium">
             Version 1.0 · PWA Enabled
           </span>
         </div>

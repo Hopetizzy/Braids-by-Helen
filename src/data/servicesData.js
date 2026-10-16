@@ -105,7 +105,7 @@ export const TIME_SLOTS = {
   morning: [
     { time: '09:00 AM', label: 'Morning Slot 1', available: true },
     { time: '10:30 AM', label: 'Morning Slot 2', available: true },
-    { time: '11:45 AM', label: 'Morning Slot 3', available: false },
+    { time: '11:45 AM', label: 'Morning Slot 3', available: true },
   ],
   afternoon: [
     { time: '01:00 PM', label: 'Afternoon Slot 1', available: true },
@@ -114,6 +114,6 @@ export const TIME_SLOTS = {
   ],
   evening: [
     { time: '05:00 PM', label: 'Evening Slot 1', available: true },
-    { time: '06:15 PM', label: 'Evening Slot 2', available: false },
+    { time: '06:15 PM', label: 'Evening Slot 2', available: true },
   ]
 };

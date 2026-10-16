@@ -10,7 +10,14 @@ import {
 } from '../../utils/dateUtils';
 
 export const StepDate = () => {
-  const { bookingData, updateBookingData, setBookingStep, publicSchedule } = useBooking();
+  const {
+    bookingData,
+    updateBookingData,
+    setBookingStep,
+    publicSchedule,
+    appointments,
+    isSupabaseConfigured,
+  } = useBooking();
 
   const allSlotTimes = [
     ...TIME_SLOTS.morning.map(s => s.time),
@@ -20,11 +27,24 @@ export const StepDate = () => {
 
   const days = generateUpcomingDays(14, 0).map(item => {
     const isAllDayOff = isDateAllDayBlocked(item.iso, publicSchedule);
-    const isAllSlotsTaken = isDateFullyBooked(item.iso, allSlotTimes, publicSchedule);
-    const isBooked = isAllDayOff || isAllSlotsTaken;
-    
-    // Check if there is an explicit reason attached
     const scheduleMatch = publicSchedule.find(s => s.date === item.iso);
+    const scheduleBlockedSlots = scheduleMatch?.blocked_slots || [];
+
+    const localBookedSlots = !isSupabaseConfigured
+      ? (appointments || [])
+          .filter(
+            a =>
+              a.source !== 'Sample Booking' &&
+              (a.dateIso === item.iso || a.date === item.iso) &&
+              a.status !== 'rejected' &&
+              a.status !== 'cancelled'
+          )
+          .map(a => a.time)
+      : [];
+
+    const combinedBlocked = Array.from(new Set([...scheduleBlockedSlots, ...localBookedSlots]));
+    const isAllSlotsTaken = allSlotTimes.length > 0 && allSlotTimes.every(slot => combinedBlocked.includes(slot));
+    const isBooked = isAllDayOff || isAllSlotsTaken;
 
     return {
       ...item,

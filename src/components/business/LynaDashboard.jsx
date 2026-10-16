@@ -33,6 +33,8 @@ export const LynaDashboard = () => {
     appointmentsLoading,
     appointmentsError,
     fetchAppointments,
+    fetchAdminAvailability,
+    fetchPublicSchedule,
     setCurrentView,
     isLiveBackend,
   } = useBooking();
@@ -88,10 +90,14 @@ export const LynaDashboard = () => {
         <div className="flex flex-wrap items-center gap-2">
           {/* Refresh Schedule Button (AC 2) */}
           <button
-            onClick={() => fetchAppointments()}
+            onClick={() => {
+              fetchAppointments();
+              fetchAdminAvailability();
+              fetchPublicSchedule();
+            }}
             disabled={appointmentsLoading}
             className="bg-white hover:bg-stone-50 text-stone-800 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-stone-200 shadow-soft transition-all flex items-center gap-1.5 disabled:opacity-60"
-            title="Refresh appointments from database"
+            title="Refresh appointments and schedule from database"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 text-primary ${

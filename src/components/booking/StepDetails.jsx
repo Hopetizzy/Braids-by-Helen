@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import { useBooking } from '../../context/BookingContext';
-import { User, Phone, MessageSquare, ArrowLeft, Check, Calendar } from 'lucide-react';
+import { User, Phone, MessageSquare, ArrowLeft, Check, Calendar, AlertCircle } from 'lucide-react';
 
 export const StepDetails = () => {
-  const { bookingData, updateBookingData, setBookingStep, submitBooking } = useBooking();
+  const {
+    bookingData,
+    updateBookingData,
+    setBookingStep,
+    submitBooking,
+    submissionLoading,
+    submissionError,
+  } = useBooking();
   const [errors, setErrors] = useState({});
 
   const handleInputChange = (field, value) => {
@@ -13,7 +20,7 @@ export const StepDetails = () => {
     }
   };
 
-  const handleConfirm = (e) => {
+  const handleConfirm = async (e) => {
     e.preventDefault();
     const newErrors = {};
 
@@ -22,7 +29,7 @@ export const StepDetails = () => {
     }
 
     if (!bookingData.phone || bookingData.phone.replace(/[^0-9]/g, '').length < 10) {
-      newErrors.phone = 'Please enter a valid WhatsApp number (e.g. 0901 018 9746)';
+      newErrors.phone = 'Please enter a valid phone or WhatsApp number (e.g. 0901 018 9746)';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -30,7 +37,11 @@ export const StepDetails = () => {
       return;
     }
 
-    submitBooking();
+    try {
+      await submitBooking();
+    } catch {
+      // submissionError is captured by BookingContext
+    }
   };
 
   return (
@@ -83,16 +94,16 @@ export const StepDetails = () => {
           )}
         </div>
 
-        {/* WhatsApp Phone Number */}
+        {/* WhatsApp or Phone Number */}
         <div>
           <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
-            WhatsApp Number <span className="text-rosewood-600">*</span>
+            WhatsApp or Phone Number <span className="text-rosewood-600">*</span>
           </label>
           <div className="relative">
             <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="tel"
-              placeholder="0901 018 9746"
+              placeholder="0901 018 9746 (WhatsApp or direct line)"
               value={bookingData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
               className={`w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-rosewood-500 transition-all ${
@@ -100,8 +111,8 @@ export const StepDetails = () => {
               }`}
             />
           </div>
-          <p className="text-[10px] text-stone-400 mt-1">
-            Braids by Helen will reach out via WhatsApp to confirm final hair length and extension specifications.
+          <p className="text-[10px] text-stone-500 mt-1">
+            Braids by Helen will call or message you to confirm your booking, hair length, and extension specifications.
           </p>
           {errors.phone && (
             <p className="text-[10px] text-red-500 mt-0.5 font-medium">{errors.phone}</p>
@@ -124,12 +135,24 @@ export const StepDetails = () => {
 
       </div>
 
+      {/* Submission Error Banner */}
+      {submissionError && (
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-800 text-xs animate-fadeIn">
+          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <strong className="block font-bold">Booking Notice</strong>
+            <span>{submissionError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Navigation */}
       <div className="pt-2 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setBookingStep(3)}
-          className="text-xs font-semibold text-stone-600 hover:text-stone-900 py-2.5 px-4 rounded-xl border border-stone-200 hover:bg-stone-50 flex items-center gap-1"
+          disabled={submissionLoading}
+          className="text-xs font-semibold text-stone-600 hover:text-stone-900 py-2.5 px-4 rounded-xl border border-stone-200 hover:bg-stone-50 flex items-center gap-1 disabled:opacity-50"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back</span>
@@ -137,9 +160,10 @@ export const StepDetails = () => {
 
         <button
           type="submit"
-          className="bg-rosewood-600 hover:bg-rosewood-700 text-white font-bold text-xs py-3 px-6 rounded-xl shadow-card transition-all active:scale-98 flex items-center gap-1.5"
+          disabled={submissionLoading}
+          className="bg-rosewood-600 hover:bg-rosewood-700 text-white font-bold text-xs py-3 px-6 rounded-xl shadow-card transition-all active:scale-98 flex items-center gap-1.5 disabled:opacity-50"
         >
-          <span>Confirm Reservation</span>
+          <span>{submissionLoading ? 'Checking & Reserving...' : 'Confirm Reservation'}</span>
         </button>
       </div>
     </form>

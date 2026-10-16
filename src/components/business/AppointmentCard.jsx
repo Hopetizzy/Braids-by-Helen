@@ -104,7 +104,11 @@ export const AppointmentCard = ({ appointment }) => {
       note,
     });
     const rescheduleWaUrl = createWhatsAppUrl(clientPhoneClean, rescheduleMessage);
-    window.open(rescheduleWaUrl, '_blank');
+    try {
+      window.open(rescheduleWaUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      window.location.href = rescheduleWaUrl;
+    }
   };
 
   // Submit decline reason and launch WhatsApp (AC 6)

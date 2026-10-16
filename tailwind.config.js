@@ -113,6 +113,7 @@ export default {
           100: '#FFF9F2',
           200: '#f7f0e4',
           300: '#ede1cf',
+          DEFAULT: '#FFF9F2',
         }
       },
       fontFamily: {

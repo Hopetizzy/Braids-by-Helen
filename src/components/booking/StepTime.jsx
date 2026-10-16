@@ -5,23 +5,69 @@ import { Sun, Sunset, Moon, Clock, ArrowRight, ArrowLeft, AlertCircle } from 'lu
 import { isDateAllDayBlocked, isSlotUnavailable, isSlotInPast } from '../../utils/dateUtils';
 
 export const StepTime = () => {
-  const { bookingData, updateBookingData, setBookingStep, publicSchedule } = useBooking();
+  const {
+    bookingData,
+    updateBookingData,
+    setBookingStep,
+    publicSchedule,
+    appointments,
+    adminAvailability,
+    isSupabaseConfigured,
+  } = useBooking();
 
   const isDayClosed = isDateAllDayBlocked(bookingData.date, publicSchedule);
 
   const checkSlotStatus = (slotTime, defaultAvailable) => {
     if (!defaultAvailable) return { disabled: true, label: 'Closed' };
     if (isDayClosed) return { disabled: true, label: 'Day Closed' };
-    if (isSlotUnavailable(bookingData.date, slotTime, publicSchedule)) {
-      return { disabled: true, label: 'Full' };
+
+    // 1. Check if manually blocked by salon admin
+    const isManuallyBlocked = (adminAvailability || []).some(
+      a => (a.unavailable_date === bookingData.date || a.date === bookingData.date) &&
+           (a.is_all_day || (Array.isArray(a.blocked_slots) && a.blocked_slots.includes(slotTime)))
+    );
+    if (isManuallyBlocked) {
+      return { disabled: true, label: 'Blocked' };
     }
+
+    // 2. Check public schedule (which compiles Supabase RPC closures, admin blocks, and active bookings)
+    if (isSlotUnavailable(bookingData.date, slotTime, publicSchedule)) {
+      return { disabled: true, label: 'Booked' };
+    }
+
+    // 3. Fallback for offline mode without database
+    if (!isSupabaseConfigured) {
+      const hasLocalBooking = (appointments || []).some(
+        a =>
+          a.source !== 'Sample Booking' &&
+          (a.dateIso === bookingData.date || a.date === bookingData.date) &&
+          a.time === slotTime &&
+          a.status !== 'rejected' &&
+          a.status !== 'cancelled'
+      );
+      if (hasLocalBooking) {
+        return { disabled: true, label: 'Booked' };
+      }
+    }
+
+    // 4. Past time slot on today
     if (isSlotInPast(bookingData.date, slotTime)) {
       return { disabled: true, label: 'Past' };
     }
+
     return { disabled: false, label: '' };
   };
 
+  // If currently selected slot is taken, reset selection
+  React.useEffect(() => {
+    if (bookingData.time && checkSlotStatus(bookingData.time, true).disabled) {
+      updateBookingData({ time: '' });
+    }
+  }, [bookingData.date, publicSchedule, appointments, adminAvailability]);
+
   const handleSelectSlot = (slotTime, period) => {
+    const status = checkSlotStatus(slotTime, true);
+    if (status.disabled) return;
     updateBookingData({
       time: slotTime,
       timePeriod: period,
@@ -184,7 +230,7 @@ export const StepTime = () => {
         <button
           type="button"
           onClick={() => setBookingStep(4)}
-          disabled={!bookingData.time}
+          disabled={!bookingData.time || checkSlotStatus(bookingData.time, true).disabled}
           className="bg-rosewood-600 hover:bg-rosewood-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-card transition-all active:scale-98 disabled:opacity-50 flex items-center gap-1"
         >
           <span>Enter Details</span>

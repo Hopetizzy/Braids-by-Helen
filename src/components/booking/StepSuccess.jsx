@@ -44,15 +44,26 @@ export const StepSuccess = () => {
       </div>
 
       <div>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 inline-flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-          Pending Review
+        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Request Received
         </span>
         <h3 className="font-serif font-bold text-xl text-stone-900 mt-1.5">
-          Booking Request Received
+          Booking Request Received!
         </h3>
-        <p className="text-xs text-stone-500 max-w-xs mx-auto">
-          Your reservation request has been submitted to <strong className="text-stone-800">Braids by Helen</strong>.
+        <p className="text-xs text-stone-600 max-w-sm mx-auto mt-1">
+          Thank you, <strong className="text-stone-900">{confirmedBooking.customerName}</strong>! Your appointment request has been submitted to <strong className="text-stone-900">Braids by Helen</strong>.
+        </p>
+      </div>
+
+      {/* Prominent Confirmation Notice */}
+      <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 text-left shadow-xs space-y-1">
+        <div className="flex items-center gap-2 text-emerald-950 font-bold text-xs sm:text-sm">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>Braids by Helen will contact you for your booking confirmation</span>
+        </div>
+        <p className="text-[11px] text-emerald-800 leading-relaxed pl-6">
+          Helen will reach out to you via WhatsApp or phone call to confirm your appointment, style details, and salon preparations.
         </p>
       </div>
 
@@ -102,14 +113,14 @@ export const StepSuccess = () => {
           </span>
           <span className="text-amber-400 font-semibold flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-            Pending Confirmation
+            Awaiting Helen's Call / Message
           </span>
         </div>
       </div>
 
       {/* Helpful Hint */}
       <p className="text-[11px] text-stone-500 leading-relaxed px-2">
-        Helen reviews all slot requests to verify hair preparations. Tap the WhatsApp button below to notify Helen right away.
+        Helen reviews every appointment request. You can also tap below to chat with Helen on WhatsApp right now with your booking reference.
       </p>
 
       {/* Action Buttons */}

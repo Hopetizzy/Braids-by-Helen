@@ -79,26 +79,14 @@ export const BookingProvider = ({ children }) => {
   const [adminAvailability, setAdminAvailability] = useState(() => {
     try {
       const cached = localStorage.getItem('bbh_admin_availability');
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(a => !String(a.id || '').startsWith('avail-seed-'));
+        }
+      }
     } catch {}
-    const mockDate1 = new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0];
-    const mockDate2 = new Date(Date.now() + 86400000 * 8).toISOString().split('T')[0];
-    return [
-      {
-        id: 'avail-seed-1',
-        unavailable_date: mockDate1,
-        is_all_day: true,
-        blocked_slots: [],
-        reason: 'Studio Deep Cleaning',
-      },
-      {
-        id: 'avail-seed-2',
-        unavailable_date: mockDate2,
-        is_all_day: false,
-        blocked_slots: ['10:30 AM', '11:30 AM'],
-        reason: 'Staff Training',
-      },
-    ];
+    return [];
   });
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
@@ -128,7 +116,19 @@ export const BookingProvider = ({ children }) => {
   const [appointments, setAppointments] = useState(() => {
     try {
       const cached = localStorage.getItem('bbh_cached_appointments');
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return parsed.map(app => {
+          if (app.source === 'Sample Booking' && (app.id === 'BBH-8824' || app.id === 'BBH-8825')) {
+            return {
+              ...app,
+              date: 'Yesterday',
+              dateIso: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+            };
+          }
+          return app;
+        });
+      }
     } catch {}
     return INITIAL_APPOINTMENTS;
   });
@@ -277,27 +277,35 @@ export const BookingProvider = ({ children }) => {
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const mapped = data.map(m => ({
-            id: m.id,
-            mediaType: m.media_type,
-            media_type: m.media_type,
-            publicUrl: m.public_url,
-            public_url: m.public_url,
-            storagePath: m.storage_path,
-            storage_path: m.storage_path,
-            title: m.title || '',
-            caption: m.caption || '',
-            category: m.category || 'braids',
-            serviceId: m.service_id,
-            service_id: m.service_id,
-            styleTag: m.style_tag || '',
-            style_tag: m.style_tag || '',
-            isPublished: Boolean(m.is_published),
-            is_published: Boolean(m.is_published),
-            displayOrder: m.display_order || 0,
-            display_order: m.display_order || 0,
-            createdAt: m.created_at,
-          }));
+          const mapped = data.map(m => {
+            let serviceSlug = m.service_id;
+            if (m.service_id && services && services.length > 0) {
+              const matched = services.find(s => s.dbId === m.service_id || s.id === m.service_id);
+              if (matched) serviceSlug = matched.slug || matched.id;
+            }
+
+            return {
+              id: m.id,
+              mediaType: m.media_type,
+              media_type: m.media_type,
+              publicUrl: m.public_url,
+              public_url: m.public_url,
+              storagePath: m.storage_path,
+              storage_path: m.storage_path,
+              title: m.title || '',
+              caption: m.caption || '',
+              category: m.category || 'braids',
+              serviceId: serviceSlug,
+              service_id: m.service_id,
+              styleTag: m.style_tag || '',
+              style_tag: m.style_tag || '',
+              isPublished: Boolean(m.is_published),
+              is_published: Boolean(m.is_published),
+              displayOrder: m.display_order || 0,
+              display_order: m.display_order || 0,
+              createdAt: m.created_at,
+            };
+          });
           setMedia(mapped);
           try {
             localStorage.setItem('bbh_portfolio_media', JSON.stringify(mapped));
@@ -327,9 +335,9 @@ export const BookingProvider = ({ children }) => {
     fetchMedia();
   }, [fetchServices, fetchMedia]);
 
-  // Fetch live appointments from Supabase for authenticated admin
+  // Fetch live appointments from Supabase
   const fetchAppointments = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase || !isAdmin) {
+    if (!isSupabaseConfigured || !supabase) {
       return;
     }
 
@@ -344,7 +352,7 @@ export const BookingProvider = ({ children }) => {
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
+      if (data) {
         const mapped = data.map(b => {
           const rawStatus = (b.status || 'PENDING').toLowerCase();
           // Normalize status representation for frontend filters
@@ -391,7 +399,7 @@ export const BookingProvider = ({ children }) => {
     }
   }, [isAdmin, updateAndPersistAppointments]);
 
-  // Fetch public schedule (aggregating closures, blocked slots, and confirmed bookings)
+  // Fetch public schedule (aggregating closures, blocked slots, and confirmed/pending bookings)
   const fetchPublicSchedule = useCallback(async () => {
     const today = new Date();
     const startDate = formatDateIso(today);
@@ -399,33 +407,9 @@ export const BookingProvider = ({ children }) => {
     future.setDate(today.getDate() + 30);
     const endDate = formatDateIso(future);
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        setScheduleLoading(true);
-        const { data, error } = await supabase.rpc('get_public_schedule', {
-          p_start_date: startDate,
-          p_end_date: endDate,
-        });
-
-        if (error) throw error;
-        if (data && Array.isArray(data)) {
-          setPublicSchedule(data);
-          try {
-            localStorage.setItem('bbh_public_schedule', JSON.stringify(data));
-          } catch {}
-          return;
-        }
-      } catch (err) {
-        console.warn('Could not fetch public schedule from RPC, using local compilation:', err.message);
-      } finally {
-        setScheduleLoading(false);
-      }
-    }
-
-    // Local compilation fallback for offline/demo mode
-    const compiled = [];
     const dateMap = new Map();
 
+    // 1. Base closures and blocked slots from admin availability
     adminAvailability.forEach(item => {
       dateMap.set(item.unavailable_date, {
         date: item.unavailable_date,
@@ -435,26 +419,113 @@ export const BookingProvider = ({ children }) => {
       });
     });
 
-    appointments
-      .filter(a => a.status === 'confirmed')
-      .forEach(a => {
-        const d = a.dateIso || a.date;
-        if (!d) return;
-        if (!dateMap.has(d)) {
-          dateMap.set(d, {
-            date: d,
-            is_all_day: false,
-            reason: '',
-            blocked_slots: [a.time],
-          });
-        } else {
-          const entry = dateMap.get(d);
-          if (!entry.blocked_slots.includes(a.time)) {
-            entry.blocked_slots.push(a.time);
-          }
-        }
-      });
+    // 2. Fetch from Supabase if live database is configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        setScheduleLoading(true);
 
+        // Safely invoke public schedule RPC if available
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_public_schedule', {
+            p_start_date: startDate,
+            p_end_date: endDate,
+          });
+
+          if (!rpcError && rpcData && Array.isArray(rpcData)) {
+            rpcData.forEach(entry => {
+              if (!dateMap.has(entry.date)) {
+                dateMap.set(entry.date, {
+                  date: entry.date,
+                  is_all_day: Boolean(entry.is_all_day),
+                  reason: entry.reason || '',
+                  blocked_slots: Array.isArray(entry.blocked_slots) ? [...entry.blocked_slots] : [],
+                });
+              } else {
+                const existing = dateMap.get(entry.date);
+                if (entry.is_all_day) existing.is_all_day = true;
+                if (Array.isArray(entry.blocked_slots)) {
+                  entry.blocked_slots.forEach(slot => {
+                    if (!existing.blocked_slots.includes(slot)) {
+                      existing.blocked_slots.push(slot);
+                    }
+                  });
+                }
+              }
+            });
+          }
+        } catch (rpcErr) {
+          console.warn('RPC schedule query warning:', rpcErr?.message);
+        }
+
+        // Fetch active bookings (including PENDING and RESCHEDULE_PROPOSED) to guarantee double-booking prevention
+        try {
+          const { data: activeDbBookings, error: dbErr } = await supabase
+            .from('bookings')
+            .select('booking_date, time_slot, status')
+            .gte('booking_date', startDate)
+            .lte('booking_date', endDate)
+            .in('status', ['PENDING', 'CONFIRMED', 'RESCHEDULE_PROPOSED']);
+
+          if (!dbErr && activeDbBookings && Array.isArray(activeDbBookings)) {
+            activeDbBookings.forEach(b => {
+              const d = b.booking_date;
+              if (!d || !b.time_slot) return;
+              if (!dateMap.has(d)) {
+                dateMap.set(d, {
+                  date: d,
+                  is_all_day: false,
+                  reason: '',
+                  blocked_slots: [b.time_slot],
+                });
+              } else {
+                const existing = dateMap.get(d);
+                if (!existing.blocked_slots.includes(b.time_slot)) {
+                  existing.blocked_slots.push(b.time_slot);
+                }
+              }
+            });
+          }
+        } catch (dbQueryErr) {
+          console.warn('Live active bookings query warning:', dbQueryErr?.message);
+        }
+      } catch (err) {
+        console.warn('Could not fetch public schedule from Supabase:', err.message);
+      } finally {
+        setScheduleLoading(false);
+      }
+    }
+
+    // 3. Only merge local appointments if Supabase is not configured (offline demo mode)
+    if (!isSupabaseConfigured) {
+      appointments
+        .filter(
+          a =>
+            a.source !== 'Sample Booking' &&
+            (a.status === 'confirmed' ||
+             a.status === 'pending' ||
+             a.status === 'new' ||
+             a.status === 'reschedule_proposed')
+        )
+        .forEach(a => {
+          const d = a.dateIso || a.date;
+          if (!d || !a.time) return;
+          if (!dateMap.has(d)) {
+            dateMap.set(d, {
+              date: d,
+              is_all_day: false,
+              reason: '',
+              blocked_slots: [a.time],
+            });
+          } else {
+            const entry = dateMap.get(d);
+            if (!entry.blocked_slots.includes(a.time)) {
+              entry.blocked_slots.push(a.time);
+            }
+          }
+        });
+    }
+
+    const compiled = [];
     dateMap.forEach(value => compiled.push(value));
     setPublicSchedule(compiled);
     try {
@@ -462,9 +533,9 @@ export const BookingProvider = ({ children }) => {
     } catch {}
   }, [adminAvailability, appointments]);
 
-  // Fetch admin availability records from Supabase
+  // Fetch admin availability records from Supabase (for both visitors and admins)
   const fetchAdminAvailability = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase || !isAdmin) return;
+    if (!isSupabaseConfigured || !supabase) return;
 
     try {
       setAvailabilityLoading(true);
@@ -481,11 +552,11 @@ export const BookingProvider = ({ children }) => {
         } catch {}
       }
     } catch (err) {
-      console.warn('Could not fetch admin availability:', err.message);
+      console.warn('Could not fetch availability from Supabase:', err.message);
     } finally {
       setAvailabilityLoading(false);
     }
-  }, [isAdmin]);
+  }, []);
 
   // Block an entire calendar date
   const blockDate = async (dateIso, reason = '') => {
@@ -542,24 +613,18 @@ export const BookingProvider = ({ children }) => {
     if (!dateIso) return;
 
     if (isSupabaseConfigured && supabase) {
-      const existing = adminAvailability.find(a => a.unavailable_date === dateIso);
-      if (existing && existing.blocked_slots && existing.blocked_slots.length > 0) {
-        await supabase
-          .from('availability')
-          .update({ is_all_day: false, reason: '' })
-          .eq('unavailable_date', dateIso);
-      } else {
+      try {
         await supabase
           .from('availability')
           .delete()
           .eq('unavailable_date', dateIso);
+      } catch (err) {
+        console.warn('Could not delete availability from Supabase:', err.message);
       }
     }
 
     setAdminAvailability(prev => {
-      const updated = prev
-        .map(a => (a.unavailable_date === dateIso ? { ...a, is_all_day: false } : a))
-        .filter(a => a.is_all_day || (a.blocked_slots && a.blocked_slots.length > 0));
+      const updated = prev.filter(a => a.unavailable_date !== dateIso);
       try {
         localStorage.setItem('bbh_admin_availability', JSON.stringify(updated));
       } catch {}
@@ -716,10 +781,22 @@ export const BookingProvider = ({ children }) => {
     return null;
   }, [adminAvailability, appointments]);
 
-  // Initial schedule load
+  // Initial schedule, availability, and appointments load on mount
   useEffect(() => {
+    fetchAdminAvailability();
     fetchPublicSchedule();
-  }, [fetchPublicSchedule]);
+    fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep schedule completely fresh whenever booking modal opens
+  useEffect(() => {
+    if (isBookingOpen) {
+      fetchAdminAvailability();
+      fetchPublicSchedule();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBookingOpen]);
 
   // Trigger appointment and availability load when navigating to business dashboard or when admin logs in
   useEffect(() => {
@@ -727,7 +804,8 @@ export const BookingProvider = ({ children }) => {
       fetchAppointments();
       fetchAdminAvailability();
     }
-  }, [currentView, isAdmin, fetchAppointments, fetchAdminAvailability]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView, isAdmin]);
 
   // Save or update an existing service
   const saveService = async (servicePayload) => {
@@ -934,6 +1012,27 @@ export const BookingProvider = ({ children }) => {
   const saveMediaItem = async (mediaPayload) => {
     let newId = mediaPayload.id || `media-${Date.now()}`;
 
+    // Verify if a value is a valid PostgreSQL UUID
+    const isUuid = (val) =>
+      typeof val === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+    let dbServiceId = null;
+    const rawServiceId = mediaPayload.serviceId || mediaPayload.service_id;
+    if (rawServiceId) {
+      if (isUuid(rawServiceId)) {
+        dbServiceId = rawServiceId;
+      } else {
+        // Look up corresponding service to see if it has a valid dbId UUID
+        const matched = services.find(
+          s => s.id === rawServiceId || s.slug === rawServiceId || s.dbId === rawServiceId
+        );
+        if (matched && isUuid(matched.dbId)) {
+          dbServiceId = matched.dbId;
+        }
+      }
+    }
+
     if (isSupabaseConfigured && supabase) {
       const dbPayload = {
         media_type: mediaPayload.mediaType || mediaPayload.media_type || 'image',
@@ -942,13 +1041,18 @@ export const BookingProvider = ({ children }) => {
         title: mediaPayload.title || '',
         caption: mediaPayload.caption || '',
         category: mediaPayload.category || 'braids',
-        service_id: mediaPayload.serviceId || mediaPayload.service_id || null,
+        service_id: dbServiceId,
         style_tag: mediaPayload.styleTag || mediaPayload.style_tag || null,
         is_published: mediaPayload.isPublished !== false,
         display_order: mediaPayload.displayOrder || media.length + 1,
       };
 
-      if (mediaPayload.id && !mediaPayload.id.startsWith('media-seed-') && !mediaPayload.id.startsWith('media-')) {
+      if (
+        mediaPayload.id &&
+        !mediaPayload.id.startsWith('media-seed-') &&
+        !mediaPayload.id.startsWith('media-') &&
+        isUuid(mediaPayload.id)
+      ) {
         const { error } = await supabase
           .from('media')
           .update(dbPayload)
@@ -973,7 +1077,7 @@ export const BookingProvider = ({ children }) => {
       storagePath: mediaPayload.storagePath || mediaPayload.storage_path,
       isPublished: mediaPayload.isPublished !== false,
       category: mediaPayload.category || 'braids',
-      serviceId: mediaPayload.serviceId || mediaPayload.service_id || null,
+      serviceId: rawServiceId || dbServiceId,
       styleTag: mediaPayload.styleTag || mediaPayload.style_tag || '',
       displayOrder: mediaPayload.displayOrder || media.length + 1,
     };
@@ -1059,7 +1163,7 @@ export const BookingProvider = ({ children }) => {
     setBookingData(prev => ({ ...prev, ...fields }));
   };
 
-  // Submit client booking request (AC 1)
+  // Submit client booking request (AC 1) with double booking prevention
   const submitBooking = async () => {
     setSubmissionLoading(true);
     setSubmissionError(null);
@@ -1097,8 +1201,58 @@ export const BookingProvider = ({ children }) => {
     };
 
     try {
+      // 1. Double booking validation: check admin availability rules
+      const isDateClosedAllDay = adminAvailability.some(
+        a => a.unavailable_date === newAppointment.dateIso && a.is_all_day
+      );
+      if (isDateClosedAllDay) {
+        throw new Error(
+          `The salon is closed on this date (${newAppointment.date}). Please choose another appointment date.`
+        );
+      }
+
+      const isSlotAdminBlocked = adminAvailability.some(
+        a =>
+          a.unavailable_date === newAppointment.dateIso &&
+          Array.isArray(a.blocked_slots) &&
+          a.blocked_slots.includes(newAppointment.time)
+      );
+      if (isSlotAdminBlocked) {
+        throw new Error(
+          `The time slot (${newAppointment.time}) on ${newAppointment.date} is not available. Please choose another time slot.`
+        );
+      }
+
+      // 2. Double booking validation: check local appointments list
+      const hasLocalBookingClash = appointments.some(
+        a =>
+          (a.dateIso === newAppointment.dateIso || a.date === newAppointment.dateIso) &&
+          a.time === newAppointment.time &&
+          a.status !== 'rejected' &&
+          a.status !== 'cancelled'
+      );
+      if (hasLocalBookingClash) {
+        throw new Error(
+          `The time slot ${newAppointment.time} on ${newAppointment.date} is already reserved for another appointment. Please choose another time slot or date.`
+        );
+      }
+
+      // 3. Double booking validation: check live database if Supabase is configured
       if (isSupabaseConfigured && supabase) {
-        const { error } = await supabase
+        const { data: dbConflicts, error: conflictErr } = await supabase
+          .from('bookings')
+          .select('id, booking_reference, status')
+          .eq('booking_date', newAppointment.dateIso)
+          .eq('time_slot', newAppointment.time)
+          .in('status', ['PENDING', 'CONFIRMED', 'RESCHEDULE_PROPOSED']);
+
+        if (!conflictErr && dbConflicts && dbConflicts.length > 0) {
+          throw new Error(
+            `The time slot ${newAppointment.time} on ${newAppointment.date} is already reserved. Please select another available time slot.`
+          );
+        }
+
+        const { error: insertError } = await supabase
           .from('bookings')
           .insert([
             {
@@ -1117,8 +1271,9 @@ export const BookingProvider = ({ children }) => {
             },
           ]);
 
-        if (error) {
-          console.error('Supabase booking insert error:', error.message);
+        if (insertError) {
+          console.error('Supabase booking insert error:', insertError.message);
+          throw new Error(insertError.message || 'Could not save appointment in database');
         }
       }
 
@@ -1135,6 +1290,9 @@ export const BookingProvider = ({ children }) => {
       } catch (pushErr) {
         console.warn('Push dispatch warning:', pushErr);
       }
+
+      // Refresh public schedule immediately so this slot becomes unavailable
+      fetchPublicSchedule().catch(() => {});
 
       try {
         confetti({
@@ -1329,10 +1487,18 @@ export const BookingProvider = ({ children }) => {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase
-          .from('bookings')
-          .delete()
-          .eq('id', target.id);
+        const isUuid = (val) =>
+          typeof val === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+        if (isUuid(target.id)) {
+          await supabase.from('bookings').delete().eq('id', target.id);
+        }
+        if (target.bookingReference) {
+          await supabase.from('bookings').delete().eq('booking_reference', target.bookingReference);
+        } else if (!isUuid(target.id)) {
+          await supabase.from('bookings').delete().eq('booking_reference', target.id);
+        }
       } catch (err) {
         console.warn('Could not delete booking from Supabase:', err.message);
       }
@@ -1341,6 +1507,8 @@ export const BookingProvider = ({ children }) => {
     updateAndPersistAppointments(prev =>
       prev.filter(app => app.id !== target.id && app.bookingReference !== (target.bookingReference || target.id))
     );
+
+    await fetchPublicSchedule();
   };
 
   const updateAppointmentStatus = (id, newStatus) => {
@@ -1378,6 +1546,7 @@ export const BookingProvider = ({ children }) => {
     deleteAppointment,
     updateAppointmentStatus,
     isLiveBackend: isSupabaseConfigured,
+    isSupabaseConfigured,
     // Availability & Schedule Controls (Slice 2)
     publicSchedule,
     scheduleLoading,
