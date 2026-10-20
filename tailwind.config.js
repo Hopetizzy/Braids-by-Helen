@@ -95,6 +95,7 @@ export default {
           800: '#5b1e30',
           900: '#380f1b',
           950: '#220810',
+          DEFAULT: '#70263D',
         },
         blush: {
           50: '#fcf6f6',
@@ -107,6 +108,7 @@ export default {
           700: '#846458',
           800: '#6d5249',
           900: '#5b453e',
+          DEFAULT: '#D9A6A6',
         },
         cream: {
           50: '#ffffff',

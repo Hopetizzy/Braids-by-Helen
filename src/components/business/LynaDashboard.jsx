@@ -8,6 +8,7 @@ import { ManagePortfolioModal } from './ManagePortfolioModal';
 import PushNotificationSettingsModal from './PushNotificationSettingsModal';
 import { AccountSettingsModal } from './AccountSettingsModal';
 import InstallPromptModal from '../pwa/InstallPromptModal';
+import { AdminGuideModal } from './AdminGuideModal';
 import {
   Calendar,
   Clock,
@@ -25,6 +26,7 @@ import {
   Database,
   Bell,
   KeyRound,
+  BookOpen,
 } from 'lucide-react';
 
 export const LynaDashboard = () => {
@@ -48,6 +50,7 @@ export const LynaDashboard = () => {
   const [showPushModal, setShowPushModal] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
 
   // Status counts
   const pendingCount = appointments.filter(
@@ -88,6 +91,16 @@ export const LynaDashboard = () => {
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Admin Operations Guide Button */}
+          <button
+            onClick={() => setShowAdminGuideModal(true)}
+            className="bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-amber-300 shadow-soft transition-all flex items-center gap-1.5"
+            title="Step-by-step guide on how to manage your salon dashboard"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-amber-800" />
+            <span>Admin Guide</span>
+          </button>
+
           {/* Refresh Schedule Button (AC 2) */}
           <button
             onClick={() => {
@@ -392,6 +405,32 @@ export const LynaDashboard = () => {
       <AccountSettingsModal
         isOpen={showAccountModal}
         onClose={() => setShowAccountModal(false)}
+      />
+
+      {/* Admin Operations & Step-by-Step Guide Modal */}
+      <AdminGuideModal
+        isOpen={showAdminGuideModal}
+        onClose={() => setShowAdminGuideModal(false)}
+        onOpenServices={() => {
+          setShowAdminGuideModal(false);
+          setShowManageServicesModal(true);
+        }}
+        onOpenPortfolio={() => {
+          setShowAdminGuideModal(false);
+          setShowManagePortfolioModal(true);
+        }}
+        onOpenAvailability={() => {
+          setShowAdminGuideModal(false);
+          setShowBlockAvailabilityModal(true);
+        }}
+        onOpenPush={() => {
+          setShowAdminGuideModal(false);
+          setShowPushModal(true);
+        }}
+        onOpenAccount={() => {
+          setShowAdminGuideModal(false);
+          setShowAccountModal(true);
+        }}
       />
     </div>
   );

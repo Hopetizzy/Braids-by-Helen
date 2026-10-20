@@ -460,9 +460,18 @@ export const ManagePortfolioModal = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* Media Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {filteredMedia.map(item => {
+            {/* Media Grid or Empty State */}
+            {filteredMedia.length === 0 ? (
+              <div className="text-center py-12 px-4 border-2 border-dashed border-stone-200 rounded-2xl bg-stone-50/50">
+                <ImageIcon className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-stone-700">No portfolio media yet</p>
+                <p className="text-[11px] text-stone-500 mt-0.5">
+                  Upload your authentic client photos and styling videos using the form above.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {filteredMedia.map(item => {
                 const isVideo = (item.mediaType || item.media_type) === 'video';
                 const isPublished = item.isPublished !== false && item.is_published !== false;
                 const url = item.publicUrl || item.public_url;
@@ -563,6 +572,7 @@ export const ManagePortfolioModal = ({ isOpen, onClose }) => {
                 );
               })}
             </div>
+          )}
           </div>
 
         </div>

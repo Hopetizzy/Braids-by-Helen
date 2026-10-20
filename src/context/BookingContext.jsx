@@ -55,13 +55,25 @@ export const BookingProvider = ({ children }) => {
   });
   const [servicesLoading, setServicesLoading] = useState(false);
 
-  // Portfolio Media State
+  // Portfolio Media State (Admin-uploaded only, no seed or hardcoded media)
   const [media, setMedia] = useState(() => {
     try {
       const cached = localStorage.getItem('bbh_portfolio_media');
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            m => !String(m.id || '').startsWith('media-seed-') &&
+                 !String(m.storagePath || m.storage_path || '').startsWith('seed/')
+          );
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('bbh_portfolio_media', JSON.stringify(cleaned));
+          }
+          return cleaned;
+        }
+      }
     } catch {}
-    return INITIAL_MEDIA;
+    return [];
   });
   const [mediaLoading, setMediaLoading] = useState(false);
 
@@ -276,36 +288,42 @@ export const BookingProvider = ({ children }) => {
         const { data, error } = await query;
         if (error) throw error;
 
-        if (data && data.length > 0) {
-          const mapped = data.map(m => {
-            let serviceSlug = m.service_id;
-            if (m.service_id && services && services.length > 0) {
-              const matched = services.find(s => s.dbId === m.service_id || s.id === m.service_id);
-              if (matched) serviceSlug = matched.slug || matched.id;
-            }
+        if (Array.isArray(data)) {
+          const mapped = data
+            .filter(
+              m =>
+                !String(m.id || '').startsWith('media-seed-') &&
+                !String(m.storage_path || '').startsWith('seed/')
+            )
+            .map(m => {
+              let serviceSlug = m.service_id;
+              if (m.service_id && services && services.length > 0) {
+                const matched = services.find(s => s.dbId === m.service_id || s.id === m.service_id);
+                if (matched) serviceSlug = matched.slug || matched.id;
+              }
 
-            return {
-              id: m.id,
-              mediaType: m.media_type,
-              media_type: m.media_type,
-              publicUrl: m.public_url,
-              public_url: m.public_url,
-              storagePath: m.storage_path,
-              storage_path: m.storage_path,
-              title: m.title || '',
-              caption: m.caption || '',
-              category: m.category || 'braids',
-              serviceId: serviceSlug,
-              service_id: m.service_id,
-              styleTag: m.style_tag || '',
-              style_tag: m.style_tag || '',
-              isPublished: Boolean(m.is_published),
-              is_published: Boolean(m.is_published),
-              displayOrder: m.display_order || 0,
-              display_order: m.display_order || 0,
-              createdAt: m.created_at,
-            };
-          });
+              return {
+                id: m.id,
+                mediaType: m.media_type,
+                media_type: m.media_type,
+                publicUrl: m.public_url,
+                public_url: m.public_url,
+                storagePath: m.storage_path,
+                storage_path: m.storage_path,
+                title: m.title || '',
+                caption: m.caption || '',
+                category: m.category || 'braids',
+                serviceId: serviceSlug,
+                service_id: m.service_id,
+                styleTag: m.style_tag || '',
+                style_tag: m.style_tag || '',
+                isPublished: Boolean(m.is_published),
+                is_published: Boolean(m.is_published),
+                displayOrder: m.display_order || 0,
+                display_order: m.display_order || 0,
+                createdAt: m.created_at,
+              };
+            });
           setMedia(mapped);
           try {
             localStorage.setItem('bbh_portfolio_media', JSON.stringify(mapped));
@@ -313,7 +331,7 @@ export const BookingProvider = ({ children }) => {
           return;
         }
       } catch (err) {
-        console.warn('Could not fetch media from Supabase, using local initial media:', err.message);
+        console.warn('Could not fetch media from Supabase, checking local cache:', err.message);
       } finally {
         setMediaLoading(false);
       }
@@ -322,12 +340,20 @@ export const BookingProvider = ({ children }) => {
     try {
       const cached = localStorage.getItem('bbh_portfolio_media');
       if (cached) {
-        setMedia(JSON.parse(cached));
-        return;
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            m =>
+              !String(m.id || '').startsWith('media-seed-') &&
+              !String(m.storagePath || m.storage_path || '').startsWith('seed/')
+          );
+          setMedia(cleaned);
+          return;
+        }
       }
     } catch {}
-    setMedia(INITIAL_MEDIA);
-  }, [isAdmin]);
+    setMedia([]);
+  }, [isAdmin, services]);
 
   // Initial services and media load
   useEffect(() => {
@@ -999,11 +1025,17 @@ export const BookingProvider = ({ children }) => {
       };
     }
 
-    // Local / Offline demo mode mock URL
-    const objectUrl = URL.createObjectURL(file);
+    // Local / Offline demo mode: Read as persistent data URL so uploads survive refresh in localStorage
+    const localDataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(URL.createObjectURL(file));
+      reader.readAsDataURL(file);
+    });
+
     return {
-      publicUrl: objectUrl,
-      storagePath: `local/${file.name}`,
+      publicUrl: localDataUrl,
+      storagePath: `local/${Date.now()}_${file.name}`,
       mediaType: isVideo ? 'video' : 'image',
     };
   };
@@ -1049,7 +1081,6 @@ export const BookingProvider = ({ children }) => {
 
       if (
         mediaPayload.id &&
-        !mediaPayload.id.startsWith('media-seed-') &&
         !mediaPayload.id.startsWith('media-') &&
         isUuid(mediaPayload.id)
       ) {
@@ -1097,10 +1128,18 @@ export const BookingProvider = ({ children }) => {
   // Delete media item from storage and database
   const deleteMediaItem = async (mediaId, storagePath) => {
     if (isSupabaseConfigured && supabase) {
-      if (storagePath && !storagePath.startsWith('seed/')) {
-        await supabase.storage.from('salon-media').remove([storagePath]);
+      if (storagePath && !storagePath.startsWith('seed/') && !storagePath.startsWith('local/')) {
+        try {
+          await supabase.storage.from('salon-media').remove([storagePath]);
+        } catch (storageErr) {
+          console.warn('Storage file deletion error:', storageErr);
+        }
       }
-      await supabase.from('media').delete().eq('id', mediaId);
+      const { error } = await supabase.from('media').delete().eq('id', mediaId);
+      if (error) {
+        console.error('Supabase deletion error:', error.message);
+        throw error;
+      }
     }
 
     setMedia(prev => {
